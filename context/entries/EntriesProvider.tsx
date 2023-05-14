@@ -1,8 +1,9 @@
 import { FC, useEffect, PropsWithChildren, useReducer } from 'react';
 
-import { Entry } from '../../interfaces';
+import { useSnackbar } from 'notistack';
 
 import { EntriesContext, entriesReducer } from '.';
+import { Entry } from '../../interfaces';
 import entriesApi from '../../apis/entriesApi';
 
 export interface EntriesState {
@@ -16,17 +17,58 @@ const Entries_INITIAL_STATE: EntriesState = {
 export const EntriesProvider: FC<PropsWithChildren> = ({ children }) => {
 
     const [state, dispatch] = useReducer(entriesReducer, Entries_INITIAL_STATE)
+    const { enqueueSnackbar } = useSnackbar();
 
     const addNewEntry = async (description: string) => {
         const { data } = await entriesApi.post<Entry>('/entries', { description });
         dispatch({ type: '[Entry] Add-Entry', payload: data })
+
+        //TODO: mostrar snackbar
+        enqueueSnackbar('Entrada creada', {
+            variant: 'success',
+            autoHideDuration: 1500,
+            anchorOrigin: {
+                vertical: 'top',
+                horizontal: 'right'
+            }
+        });
     }
 
-    const updateEntry = async ({ _id, description, status }: Entry) => {
+    const updateEntry = async ({ _id, description, status }: Entry, showSnackbar = false) => {
         try {
             const { data } = await entriesApi.put<Entry>(`/entries/${_id}`, { description, status });
             dispatch({ type: '[Entry] Entry-Updated', payload: data });
 
+            if (showSnackbar) {
+                //TODO: mostrar snackbar
+                enqueueSnackbar('Entrada actualizada', {
+                    variant: 'success',
+                    autoHideDuration: 1500,
+                    anchorOrigin: {
+                        vertical: 'top',
+                        horizontal: 'right'
+                    }
+                });
+            }
+        } catch (error) {
+            console.log({ error });
+        }
+    }
+
+    const deleteEntry = async ({ _id }: Entry) => {
+        try {
+            const { data } = await entriesApi.delete<Entry>(`/entries/${_id}`);
+            dispatch({ type: '[Entry] Entry-Deleted', payload: data });
+            //TODO: mostrar snackbar
+            enqueueSnackbar('Entrada eliminada', {
+                variant: 'success',
+                autoHideDuration: 1500,
+                anchorOrigin: {
+                    vertical: 'top',
+                    horizontal: 'right'
+                }
+            });
+            refreshEntries();
         } catch (error) {
             console.log({ error });
         }
@@ -49,6 +91,7 @@ export const EntriesProvider: FC<PropsWithChildren> = ({ children }) => {
             //Methods
             addNewEntry,
             updateEntry,
+            deleteEntry,
         }} >
             {children}
         </EntriesContext.Provider>
